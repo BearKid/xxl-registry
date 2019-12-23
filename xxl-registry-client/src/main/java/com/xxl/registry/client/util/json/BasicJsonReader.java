@@ -12,8 +12,8 @@ import java.util.Map;
  * @author xuxueli 2018-11-30
  */
 public class BasicJsonReader {
-	private static Logger logger = LoggerFactory.getLogger(BasicJsonwriter.class);
-
+    private static Logger logger = LoggerFactory.getLogger(BasicJsonwriter.class);
+    private final DoubleQuotesTextExtractor dqtExtractor = new DoubleQuotesTextExtractor();
 
 	public Map<String, Object> parseMap(String json) {
 		if (json != null) {
@@ -73,49 +73,28 @@ public class BasicJsonReader {
 		return json;
 	}
 
-	private Map<String, Object> parseMapInternal(String json) {
-		Map<String, Object> map = new LinkedHashMap<String, Object>();
-		json = trimLeadingCharacter(trimTrailingCharacter(json, '}'), '{');
-		for (String pair : tokenize(json)) {
-			String[] values = trimArrayElements(split(pair, ":"));
-			String key = trimLeadingCharacter(trimTrailingCharacter(values[0], '"'), '"');
-			Object value = parseInternal(values[1]);
-			map.put(key, value);
-		}
-		return map;
-	}
+    private Map<String, Object> parseMapInternal(String json) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        json = trimLeadingCharacter(trimTrailingCharacter(json, '}'), '{');
+        for (String pair : tokenize(json)) {
+            final JsonElement jsonElement = parseJsonKvPairToJsonElement(pair);
+            map.put(jsonElement.getKey(), jsonElement.getValue());
+        }
+        return map;
+    }
 
-	// append start
-	private static String[] split(String toSplit, String delimiter) {
-		if (toSplit!=null && !toSplit.isEmpty() && delimiter!=null && !delimiter.isEmpty()) {
-			int offset = toSplit.indexOf(delimiter);
-			if (offset < 0) {
-				return null;
-			} else {
-				String beforeDelimiter = toSplit.substring(0, offset);
-				String afterDelimiter = toSplit.substring(offset + delimiter.length());
-				return new String[]{beforeDelimiter, afterDelimiter};
-			}
-		} else {
-			return null;
-		}
-	}
-	private static String[] trimArrayElements(String[] array) {
-		if (array == null || array.length == 0) {
-			return new String[0];
-		} else {
-			String[] result = new String[array.length];
-
-			for(int i = 0; i < array.length; ++i) {
-				String element = array[i];
-				result[i] = element != null ? element.trim() : null;
-			}
-
-			return result;
-		}
-	}
-	// append end
-
+    private JsonElement parseJsonKvPairToJsonElement(String jsonKvPair) {
+        final ExtractedText extractedKey = dqtExtractor.extract(jsonKvPair);
+        final String otherText = jsonKvPair.substring(extractedKey.getEndIndex() + 1);
+        final int colonIndex = otherText.indexOf(":");
+        if (colonIndex != -1) {
+            final String rawValue = otherText.substring(colonIndex + 1).trim();
+            final Object value = parseInternal(rawValue);
+            return new JsonElement(extractedKey.getContent(), value);
+        } else {
+            throw new IllegalArgumentException(String.format("input (%s) not contains colon [:]", jsonKvPair));
+        }
+    }
 
 	private List<String> tokenize(String json) {
 		List<String> list = new ArrayList<String>();
