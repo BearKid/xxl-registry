@@ -92,37 +92,42 @@ public class XxlRegistryBaseClient {
     }
 
     private Map<String, Object> requestAndValid(String pathUrl, String requestBody, int timeout){
-
-        for (String adminAddressUrl: adminAddressArr) {
-            String finalUrl = adminAddressUrl + pathUrl;
-
-            // request
-            String responseData = BasicHttpUtil.postBody(finalUrl, requestBody, timeout);
-            if (responseData == null) {
-                return null;
+        Map<String, Object> finalResult = null;
+        for (String adminAddressUrl : adminAddressArr) {
+            final String finalUrl = adminAddressUrl + pathUrl;
+            final Map<String, Object> resultTemp = request0(finalUrl, requestBody, timeout);
+            if (resultTemp != null) {
+                finalResult = resultTemp;
+                break;
             }
+        }
+        return finalResult;
+    }
 
-            // parse resopnse
-            Map<String, Object> resopnseMap = null;
-            try {
-                resopnseMap = BasicJson.parseMap(responseData);
-            } catch (Exception e) { }
-
-
-            // valid resopnse
-            if (resopnseMap==null
-                    || !resopnseMap.containsKey("code")
-                    || !"200".equals(String.valueOf(resopnseMap.get("code")))
-                    ) {
-                logger.warn("XxlRegistryBaseClient response fail, responseData={}", responseData);
-                return null;
-            }
-
-            return resopnseMap;
+    private Map<String, Object> request0(final String finalUrl, final String requestBody, final int timeout) {
+        // request
+        String responseData = BasicHttpUtil.postBody(finalUrl, requestBody, timeout);
+        if (responseData == null) {
+            return null;
         }
 
+        // parse resopnse
+        Map<String, Object> resopnseMap = null;
+        try {
+            resopnseMap = BasicJson.parseMap(responseData);
+        } catch (Exception e) { }
 
-        return null;
+
+        // valid resopnse
+        if (resopnseMap==null
+                || !resopnseMap.containsKey("code")
+                || !"200".equals(String.valueOf(resopnseMap.get("code")))
+                ) {
+            logger.warn("XxlRegistryBaseClient response fail, responseData={}", responseData);
+            return null;
+        }
+
+        return resopnseMap;
     }
 
     /**
